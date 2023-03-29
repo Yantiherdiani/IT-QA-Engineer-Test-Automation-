@@ -1,0 +1,67 @@
+<?php
+
+namespace Tests\Browser;
+
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
+
+class ExampleTest extends DuskTestCase
+{
+    /**
+     * A basic browser test example.
+     */
+    public function testBasicExample(): void
+    {
+        $this->browse(function (Browser $browser) {
+            $browser =   $browser->visit('https://www.saucedemo.com/')
+            ->waitFor('.login_container');
+
+
+            // store password and username
+            $usernames = $browser->text('#login_credentials');
+            $userName = explode("\n", $usernames);
+
+            $password = $browser->text(".login_password");
+            $password = explode("\n", $password);
+
+
+            // login test
+            $browser->visit('https://www.saucedemo.com/')
+                    ->type('input[name="user-name"]', $userName[1])
+                    ->type('input[name="password"]', $password[1])
+                    ->press('input[type="submit"]')
+                    ->waitForLocation('/inventory.html')
+                    ->assertPathIs('/inventory.html');
+
+            // get price
+            $priceText = $browser->visit('https://www.saucedemo.com/inventory-item.html?id=4')
+            ->waitFor('.inventory_details_desc_container')
+            ->text('.inventory_details_price');
+
+            $price = floatval(str_replace('$', '', $priceText));
+            $this->assertEquals(29.99, $price);
+
+            $browser->visit('https://www.saucedemo.com/inventory-item.html?id=4')
+            ->waitFor('.inventory_details_desc_container')
+            ->click('.btn_primary.btn_inventory')
+            ->waitFor('.shopping_cart_container')
+            ->click('.shopping_cart_link')
+            ->waitFor('.cart_list')
+            ->click('.btn_action.checkout_button')
+            ->waitFor('#checkout_info_container')
+            ->type('input[name="firstName"]', 'John')
+            ->type('input[name="lastName"]', 'Doe')
+            ->type('input[name="postalCode"]', '12345')
+            ->click('.btn_primary.cart_button')
+            ->waitFor('#checkout_summary_container')
+            // assertion checkout
+            ->assertSee('Checkout: Overview')
+            ->assertSee($priceText)
+            ->click('#finish')
+            ->waitFor("#checkout_complete_container")
+            // assertion complete
+            ->assertSee('Thank you for your order!');
+        });
+    }
+}
